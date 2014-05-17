@@ -106,6 +106,9 @@ public class WordProcessing implements ActionListener, ItemListener {
 	static final String title = "Word Processor"; //Program name
 	static final String newDocName = title + " - New document"; //New doc title
     
+	static String s = System.getProperty("file.separator");
+	static String os = System.getProperty("os.name").toLowerCase();
+	
     JFrame frame1 = new JFrame(newDocName); //Make the frame
     JPanel panel1 = new JPanel(); //Make the panel
     static JTextPane area1 = new JTextPane(); //Make the input area
@@ -121,9 +124,9 @@ public class WordProcessing implements ActionListener, ItemListener {
     
     //Formatting bar
     JToolBar formatting = new JToolBar("Formatting"); //Make the formatting toolbar
-    static JToggleButton bold = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("Bold.png")));
-    static JToggleButton italic = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("Italic.png")));
-    static JToggleButton underline = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("Underline.png")));
+    static JToggleButton bold = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("resources" + s + "bold.png")));
+    static JToggleButton italic = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("resources" + s + "italic.png")));
+    static JToggleButton underline = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("resources" + s + "underline.png")));
     
     //Menu bar
     JMenuBar bar = new JMenuBar(); //Make the menu bar
@@ -340,9 +343,6 @@ public class WordProcessing implements ActionListener, ItemListener {
     }
     
     public void makeDirectory() {
-		String s = System.getProperty("file.separator");
-		String os = System.getProperty("os.name").toLowerCase();
-
 		if (os.contains("win")) {
 			String appData = System.getenv("APPDATA");
 			String mainDir = appData + s + "WordProcessor" + s;
