@@ -100,6 +100,12 @@ import javax.swing.text.StyleContext;
 import javax.swing.text.StyledDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.rtf.RTFEditorKit;
+
+import com.wordprocessor.filters.HtmlFilter;
+import com.wordprocessor.filters.RtfFilter;
+import com.wordprocessor.filters.TxtFilter;
+import com.wordprocessor.filters.WpFilter;
+import com.wordprocessor.util.FileUtils;
  
 public class WordProcessing implements ActionListener, ItemListener {
 	
@@ -372,17 +378,6 @@ public class WordProcessing implements ActionListener, ItemListener {
 					"Only Windows OS is supported!");
 		}
 	}
-
-	public static String getExtension(File f) {
-		String ext = null;
-		String s = f.getName();
-		int i = s.lastIndexOf('.');
-
-		if (i > 0 && i < s.length() - 1) {
-			ext = s.substring(i + 1).toLowerCase();
-		}
-		return ext;
-	}
 	
 	public void prepareToClose() {
 		if (!revisionSaved) {
@@ -438,7 +433,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 			try {
 				File saveLocation = saveAs.getSelectedFile();
 				String absPath = saveLocation.getAbsolutePath();
-				if (getExtension(saveLocation) == null || !saveAs.getFileFilter().accept(saveLocation)) {
+				if (FileUtils.getExtension(saveLocation) == null || !saveAs.getFileFilter().accept(saveLocation)) {
 					if (!absPath.endsWith(".") || !saveAs.getFileFilter().accept(saveLocation)) {
 						saveLocation = new File(absPath + "." + saveAs.getFileFilter().toString());
 					}
@@ -449,7 +444,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 				
 				if (!saveLocation.exists()) {
 					saveLocation.createNewFile();
-					if (getExtension(saveLocation).equals("rtf") || getExtension(saveLocation).equals("wp")) {
+					if (FileUtils.getExtension(saveLocation).equals("rtf") || FileUtils.getExtension(saveLocation).equals("wp")) {
 						BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(saveLocation));
 						RTFEditorKit rtf = new RTFEditorKit();
 						rtf.write(out, doc, doc.getStartPosition().getOffset(), doc.getLength());
@@ -471,7 +466,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 				else {
 					int a = JOptionPane.showConfirmDialog(frame1, "This file already exists. Are you sure you would like to write over it?", title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 					if (a == JOptionPane.YES_OPTION) {
-						if (getExtension(saveLocation).equals("rtf") || getExtension(saveLocation).equals("wp")) {
+						if (FileUtils.getExtension(saveLocation).equals("rtf") || FileUtils.getExtension(saveLocation).equals("wp")) {
 							BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(saveLocation));
 							RTFEditorKit rtf = new RTFEditorKit();
 							rtf.write(out, doc, doc.getStartPosition().getOffset(), doc.getLength());
@@ -590,7 +585,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 					
 					BufferedOutputStream out;
 					
-					if (getExtension(currentFile).equals("rtf") || getExtension(currentFile).equals("wp")) {
+					if (FileUtils.getExtension(currentFile).equals("rtf") || FileUtils.getExtension(currentFile).equals("wp")) {
 						out = new BufferedOutputStream(new FileOutputStream(currentFile));
 						rtf = new RTFEditorKit();
 						rtf.write(out, doc, doc.getStartPosition().getOffset(), doc.getLength());
@@ -655,7 +650,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 						return;
 					}
 					clearDocument(false);
-					if (getExtension(openLocation).equals("rtf") || getExtension(openLocation).equals("wp")) {
+					if (FileUtils.getExtension(openLocation).equals("rtf") || FileUtils.getExtension(openLocation).equals("wp")) {
 						RTFEditorKit kit = new RTFEditorKit();
 						BufferedInputStream in = new BufferedInputStream(new FileInputStream(openLocation));
 						kit.read(in, doc, doc.getStartPosition().getOffset());
@@ -729,7 +724,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 					
 					File expLocation = exp.getSelectedFile();
 					String absPath = expLocation.getAbsolutePath();
-					if (getExtension(expLocation) == null || !exp.getFileFilter().accept(expLocation)) {
+					if (FileUtils.getExtension(expLocation) == null || !exp.getFileFilter().accept(expLocation)) {
 						if (!absPath.endsWith(".") || !exp.getFileFilter().accept(expLocation)) {
 							expLocation = new File(absPath + "." + exp.getFileFilter().toString());
 						}
@@ -740,7 +735,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 					
 					if (!expLocation.exists()) {
 						expLocation.createNewFile();
-						if (getExtension(expLocation).equals("html")) {
+						if (FileUtils.getExtension(expLocation).equals("html")) {
 							out = new BufferedOutputStream(new FileOutputStream(expLocation));
 							html = new HTMLEditorKit();
 							html.write(out, doc, doc.getStartPosition().getOffset(), doc.getLength());
@@ -750,7 +745,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 					else {
 						int a = JOptionPane.showConfirmDialog(frame1, "This file already exists. Are you sure you would like to write over it?", title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 						if (a == JOptionPane.YES_OPTION) {
-							if (getExtension(expLocation).equals("html")) {
+							if (FileUtils.getExtension(expLocation).equals("html")) {
 								out = new BufferedOutputStream(new FileOutputStream(expLocation));
 								html = new HTMLEditorKit();
 								html.write(out, doc, doc.getStartPosition().getOffset(), doc.getLength());
@@ -980,184 +975,6 @@ public class WordProcessing implements ActionListener, ItemListener {
 				}
 			}
 		}
-	}
-	
-	static class TxtFilter extends FileFilter {
-	
-		public boolean accept(File f) {
-			if (f.isDirectory()) {
-				return true;
-			}
-			
-			String ex = getExtension(f);
-			if (ex != null) {
-				if (ex.equals("txt")) {
-					return true;
-				}
-			}
-			return false;
-		}
-	
-		public String getDescription() {
-			return "Plain text file - .txt";
-		}
-		
-		@Override
-		public String toString() {
-			return "txt";
-		}
-	}
-	
-	static class WpFilter extends FileFilter {
-
-		public boolean accept(File f) {
-			if (f.isDirectory()) {
-				return true;
-			}
-			
-			String ex = getExtension(f);
-			if (ex != null) {
-				if (ex.equals("wp")) {
-					return true;
-				}
-			}
-			return false;
-		}
-	
-		public String getDescription() {
-			return "Word Processor file - .wp";
-		}
-	
-		@Override
-		public String toString() {
-			return "wp";
-		}
-	
-	}
-	
-	static class RtfFilter extends FileFilter {
-		
-		public boolean accept(File f) {
-			if (f.isDirectory()) {
-				return true;
-			}
-			
-			String ex = getExtension(f);
-			if (ex != null) {
-				if (ex.equals("rtf")) {
-					return true;
-				}
-			}
-			return false;
-		}
-		
-		public String getDescription() {
-			return "Rich text format - .rtf";
-		}
-		
-		@Override
-		public String toString() {
-			return "rtf";
-		}
-	}
-	
-	static class HtmlFilter extends FileFilter {
-		
-		public boolean accept(File f) {
-			if (f.isDirectory()) {
-				return true;
-			}
-			
-			String ex = getExtension(f);
-			if (ex != null) {
-				if (ex.equals("html")) {
-					return true;
-				}
-			}
-			return false;
-		}
-		
-		public String getDescription() {
-			return "HyperText Markup Language - .html";
-		}
-		
-		@Override
-		public String toString() {
-			return "html";
-		}
-	}
-	
-	static class CaretStalker implements CaretListener {
-		public void caretUpdate(CaretEvent e) {
-			boolean boldFound = false;
-			boolean italicFound = false;
-			boolean underlineFound = false;
-			
-			int dot = e.getDot();
-			int mark = e.getMark();
-			
-			if (dot == mark) {
-				WordProcessing.copy.setEnabled(false);
-				WordProcessing.cut.setEnabled(false);
-				
-				boldFound = checkStyleAtIndex(StyleConstants.Bold, dot - 1, WordProcessing.lockButtonBold);
-				italicFound = checkStyleAtIndex(StyleConstants.Italic, dot - 1, WordProcessing.lockButtonItalic);
-				underlineFound = checkStyleAtIndex(StyleConstants.Underline, dot - 1, WordProcessing.lockButtonUnderline);
-			}
-			else {
-				WordProcessing.copy.setEnabled(true);
-				WordProcessing.cut.setEnabled(true);
-				
-				for (int i = Math.min(dot, mark); i < Math.max(dot, mark); i++) {
-					boldFound = checkStyleAtIndex(StyleConstants.Bold, i);
-					italicFound = checkStyleAtIndex(StyleConstants.Italic, i);
-					underlineFound = checkStyleAtIndex(StyleConstants.Underline, i);
-					
-					if (boldFound || italicFound || underlineFound) {
-						break;
-					}
-				}
-			}
-			
-			selectButton(WordProcessing.bold, boldFound);
-			selectButton(WordProcessing.italic, italicFound);
-			selectButton(WordProcessing.underline, underlineFound);
-			
-		}
-		
-		public void selectButton(JToggleButton button, boolean selected) {
-			button.setSelected(selected);
-		}
-		
-		public boolean checkStyleAtIndex(Object constant, int index) {
-			Element el = doc.getCharacterElement(index);
-			AttributeSet attr = null;
-			if (el != null) {
-				attr = el.getAttributes();
-			}
-			Object check = attr == null ? null : attr.getAttribute(constant);
-			if (check != null && check != Boolean.FALSE) {
-				return true;
-			}
-			return false;
-		}
-		
-		public boolean checkStyleAtIndex(Object constant, int index, boolean locked) {
-			Element el = doc.getCharacterElement(index);
-			AttributeSet attr = null;
-			if (el != null) {
-				attr = el.getAttributes();
-			}
-			Object check = attr == null ? null : attr.getAttribute(constant);
-			if (check != null && check != Boolean.FALSE) {
-				return true;
-			}
-			else if (locked) {
-				return true;
-			}
-			return false;
-		}
-		
 	}
 	
 	static class DocStalker implements DocumentListener {
