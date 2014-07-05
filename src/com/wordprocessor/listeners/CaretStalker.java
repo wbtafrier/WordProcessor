@@ -7,9 +7,18 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.Element;
 import javax.swing.text.StyleConstants;
 
+import com.wordprocessor.core.WordProcessor;
+
 public class CaretStalker implements CaretListener {
 	
+	private WordProcessor wordProcessor = null;
+	
+	public CaretStalker(WordProcessor wp) {
+		this.wordProcessor = wp;
+	}
+	
 	public void caretUpdate(CaretEvent e) {
+		
 		boolean boldFound = false;
 		boolean italicFound = false;
 		boolean underlineFound = false;
@@ -18,16 +27,16 @@ public class CaretStalker implements CaretListener {
 		int mark = e.getMark();
 		
 		if (dot == mark) {
-			WordProcessing.copy.setEnabled(false);
-			WordProcessing.cut.setEnabled(false);
+			wordProcessor.copy.setEnabled(false);
+			wordProcessor.cut.setEnabled(false);
 			
-			boldFound = checkStyleAtIndex(StyleConstants.Bold, dot - 1, WordProcessing.lockButtonBold);
-			italicFound = checkStyleAtIndex(StyleConstants.Italic, dot - 1, WordProcessing.lockButtonItalic);
-			underlineFound = checkStyleAtIndex(StyleConstants.Underline, dot - 1, WordProcessing.lockButtonUnderline);
+			boldFound = checkStyleAtIndex(StyleConstants.Bold, dot - 1, wordProcessor.lockButtonBold);
+			italicFound = checkStyleAtIndex(StyleConstants.Italic, dot - 1, wordProcessor.lockButtonItalic);
+			underlineFound = checkStyleAtIndex(StyleConstants.Underline, dot - 1, wordProcessor.lockButtonUnderline);
 		}
 		else {
-			WordProcessing.copy.setEnabled(true);
-			WordProcessing.cut.setEnabled(true);
+			wordProcessor.copy.setEnabled(true);
+			wordProcessor.cut.setEnabled(true);
 			
 			for (int i = Math.min(dot, mark); i < Math.max(dot, mark); i++) {
 				boldFound = checkStyleAtIndex(StyleConstants.Bold, i);
@@ -40,9 +49,9 @@ public class CaretStalker implements CaretListener {
 			}
 		}
 		
-		selectButton(WordProcessing.bold, boldFound);
-		selectButton(WordProcessing.italic, italicFound);
-		selectButton(WordProcessing.underline, underlineFound);
+		selectButton(wordProcessor.bold, boldFound);
+		selectButton(wordProcessor.italic, italicFound);
+		selectButton(wordProcessor.underline, underlineFound);
 		
 	}
 	
@@ -51,7 +60,7 @@ public class CaretStalker implements CaretListener {
 	}
 	
 	public boolean checkStyleAtIndex(Object constant, int index) {
-		Element el = doc.getCharacterElement(index);
+		Element el = wordProcessor.doc.getCharacterElement(index);
 		AttributeSet attr = null;
 		if (el != null) {
 			attr = el.getAttributes();
@@ -64,7 +73,7 @@ public class CaretStalker implements CaretListener {
 	}
 	
 	public boolean checkStyleAtIndex(Object constant, int index, boolean locked) {
-		Element el = doc.getCharacterElement(index);
+		Element el = wordProcessor.doc.getCharacterElement(index);
 		AttributeSet attr = null;
 		if (el != null) {
 			attr = el.getAttributes();

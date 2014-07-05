@@ -1,3 +1,4 @@
+package com.wordprocessor.core;
 /*
  Alex Frier
  5/22/2013
@@ -35,11 +36,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.Toolkit;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.StringSelection;
-import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -59,6 +55,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Scanner;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -79,21 +76,10 @@ import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
-import javax.swing.TransferHandler;
 import javax.swing.WindowConstants;
-import javax.swing.event.CaretEvent;
-import javax.swing.event.CaretListener;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
-import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultEditorKit;
-import javax.swing.text.Document;
-import javax.swing.text.DocumentFilter;
-import javax.swing.text.Element;
-import javax.swing.text.JTextComponent;
-import javax.swing.text.Position;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyleContext;
@@ -101,106 +87,131 @@ import javax.swing.text.StyledDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.rtf.RTFEditorKit;
 
+import com.wordprocessor.action.BoldAction;
+import com.wordprocessor.action.FindNextAction;
+import com.wordprocessor.action.ItalicAction;
+import com.wordprocessor.action.UnderlineAction;
 import com.wordprocessor.filters.HtmlFilter;
 import com.wordprocessor.filters.RtfFilter;
 import com.wordprocessor.filters.TxtFilter;
 import com.wordprocessor.filters.WpFilter;
+import com.wordprocessor.listeners.CaretStalker;
+import com.wordprocessor.listeners.DocStalker;
+import com.wordprocessor.util.ClipboardHandler;
 import com.wordprocessor.util.FileUtils;
  
-public class WordProcessing implements ActionListener, ItemListener {
+public class WordProcessor implements ActionListener, ItemListener {
 	
-	static final String title = "Word Processor"; //Program name
-	static final String newDocName = title + " - New document"; //New doc title
-    
-	static String s = System.getProperty("file.separator");
-	static String os = System.getProperty("os.name").toLowerCase();
+	public static final String title = "Word Processor"; // Program name
+	public static final String newDocName = title + " - New document"; // New doc title
+
+	private static String s = System.getProperty("file.separator");
+	private static String os = System.getProperty("os.name").toLowerCase();
 	
-    JFrame frame1 = new JFrame(newDocName); //Make the frame
-    JPanel panel1 = new JPanel(); //Make the panel
-    static JTextPane area1 = new JTextPane(); //Make the input area
-    static StyledDocument doc = area1.getStyledDocument(); //Make the format displayer
-    JScrollPane pane1 = new JScrollPane(area1); //Make the scroll bar
-    
-    JDialog findDlg = new JDialog(frame1, "Word Processer - Find");
-	JPanel findPnl = new JPanel();
-	JTextField findFld = new JTextField(20);
-	JCheckBox matchCase = new JCheckBox("Match case");
-	JButton findBtn = new JButton("Find");
-	JLabel findMsg = new JLabel("");
-    
-    //Formatting bar
-    JToolBar formatting = new JToolBar("Formatting"); //Make the formatting toolbar
-    static JToggleButton bold = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("resources" + s + "bold.png")));
-    static JToggleButton italic = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("resources" + s + "italic.png")));
-    static JToggleButton underline = new JToggleButton(new ImageIcon(WordProcessing.class.getResource("resources" + s + "underline.png")));
-    
-    //Menu bar
-    JMenuBar bar = new JMenuBar(); //Make the menu bar
-    
-	JMenu file = new JMenu("File");
-	JMenuItem newFile = new JMenuItem("New", KeyEvent.VK_N);
-	JMenuItem saveAsB = new JMenuItem("Save as...", KeyEvent.VK_A);
-	JMenuItem save = new JMenuItem("Save",  KeyEvent.VK_S);
-	JMenuItem open = new JMenuItem("Open...", KeyEvent.VK_O);
-	JMenuItem export = new JMenuItem("Export...", KeyEvent.VK_P);
-	JMenuItem exit = new JMenuItem("Exit", KeyEvent.VK_E);
-	
-	JMenu edit = new JMenu("Edit");
-	static JMenuItem copy = new JMenuItem(new DefaultEditorKit.CopyAction());
-	JMenuItem paste = new JMenuItem(new DefaultEditorKit.PasteAction());
-	static JMenuItem cut = new JMenuItem(new DefaultEditorKit.CutAction());
-	JMenuItem find = new JMenuItem("Find...", KeyEvent.VK_F);
-	JMenuItem select = new JMenuItem("Select all");
-	
-	JToolBar stats = new JToolBar("Statistics");
-	static JLabel chars = new JLabel("Characters: 0"); 
-	static JLabel charsNoSpaces = new JLabel("Characters (no spaces): 0");
-	static JLabel words = new JLabel("Words: 0");	
-	//Files/directories
-	File processor = new File("");
-	File docs = new File("");
-	File exports = new File("");
-	File currentFile = new File("");
-	File currentExportFile = new File("");
-	
-	//Filters
-	FileFilter wp = new WpFilter(); //.wp exclusive format
-	FileFilter rtf = new RtfFilter(); //.rtf format
-	FileFilter txt = new TxtFilter(); //.txt format
-	FileFilter html = new HtmlFilter(); //.html export format
-	FileFilter currentFilter = null;
-	FileFilter currentExportFilter = null;
-	
-	static int charCount = 0;
-	static int charCountNoSpaces = 0;
-	static int wordCount = 0;
-	
-	static boolean revisionSaved = true;
-	
-	boolean fileOpen = false;
-	boolean exported = false;
-	
-	static boolean lockButtonBold = false;
-	static boolean lockButtonItalic = false;
-	static boolean lockButtonUnderline = false;
-	
-	boolean findAndMatchCase = false;
-    
+	private ImageIcon boldIcon = null;
+	private ImageIcon italicIcon = null;
+	private ImageIcon underlineIcon = null;
+
+	public JFrame frame1 = new JFrame(newDocName); // Make the frame
+	public JPanel panel1 = new JPanel(); // Make the panel
+	public JTextPane area1 = new JTextPane(); // Make the input area
+	public StyledDocument doc = area1.getStyledDocument(); // Make the format displayer
+	public JScrollPane pane1 = new JScrollPane(area1); // Make the scroll bar
+
+	public JDialog findDlg = new JDialog(frame1, "Word Processer - Find");
+	public JPanel findPnl = new JPanel();
+	public JTextField findFld = new JTextField(20);
+	public JCheckBox matchCase = new JCheckBox("Match case");
+	public JButton findNext = new JButton("Find");
+	public JLabel findMsg = new JLabel("");
+
+	// Formatting bar
+	public JToolBar formatting = new JToolBar("Formatting"); // Make the formatting toolbar
+	public JToggleButton bold = null;
+	public JToggleButton italic = null;
+	public JToggleButton underline = null;
+
+	// Menu bar
+	public JMenuBar bar = new JMenuBar(); // Make the menu bar
+
+	public JMenu file = new JMenu("File");
+	public JMenuItem newFile = new JMenuItem("New", KeyEvent.VK_N);
+	public JMenuItem saveAsB = new JMenuItem("Save as...", KeyEvent.VK_A);
+	public JMenuItem save = new JMenuItem("Save", KeyEvent.VK_S);
+	public JMenuItem open = new JMenuItem("Open...", KeyEvent.VK_O);
+	public JMenuItem export = new JMenuItem("Export...", KeyEvent.VK_P);
+	public JMenuItem exit = new JMenuItem("Exit", KeyEvent.VK_E);
+
+	public JMenu edit = new JMenu("Edit");
+	public JMenuItem copy = new JMenuItem(new DefaultEditorKit.CopyAction());
+	public JMenuItem paste = new JMenuItem(new DefaultEditorKit.PasteAction());
+	public JMenuItem cut = new JMenuItem(new DefaultEditorKit.CutAction());
+	public JMenuItem find = new JMenuItem("Find...", KeyEvent.VK_F);
+	public JMenuItem select = new JMenuItem("Select all");
+
+	public JToolBar stats = new JToolBar("Statistics");
+	public JLabel chars = new JLabel("Characters: 0");
+	public JLabel charsNoSpaces = new JLabel("Characters (no spaces): 0");
+	public JLabel words = new JLabel("Words: 0");
+	// Files/directories
+	public File processor = new File("");
+	public File docs = new File("");
+	public File exports = new File("");
+	public File currentFile = new File("");
+	public File currentExportFile = new File("");
+
+	// Filters
+	private FileFilter wp = new WpFilter(); // .wp exclusive format
+	private FileFilter rtf = new RtfFilter(); // .rtf format
+	private FileFilter txt = new TxtFilter(); // .txt format
+	private FileFilter html = new HtmlFilter(); // .html export format
+	private FileFilter currentFilter = null;
+	private FileFilter currentExportFilter = null;
+
+	public int charCount = 0;
+	public int charCountNoSpaces = 0;
+	public int wordCount = 0;
+
+	public boolean revisionSaved = true;
+
+	public boolean fileOpen = false;
+	public boolean exported = false;
+
+	public boolean lockButtonBold = false;
+	public boolean lockButtonItalic = false;
+	public boolean lockButtonUnderline = false;
+
+	public boolean findAndMatchCase = false;
+
     public static void main(String[] args) {
-    	new WordProcessing();
+    	new WordProcessor();
     }
     
-    public WordProcessing() {
+    public WordProcessor() {
     	makeDirectory();
 		
-		bold.addActionListener(this);
-		bold.setMnemonic(KeyEvent.VK_B);
+    	try {
+			this.boldIcon = new ImageIcon(ImageIO.read(WordProcessor.class.getResourceAsStream("/bold.png")));
+			this.italicIcon = new ImageIcon(ImageIO.read(WordProcessor.class.getResourceAsStream("/italic.png")));
+			this.underlineIcon = new ImageIcon(ImageIO.read(WordProcessor.class.getResourceAsStream("/underline.png")));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+    	
+    	this.bold = new JToggleButton(new BoldAction(this, this.boldIcon)); 
+		bold.setActionCommand("bold_bind");
+		bold.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke('B', KeyEvent.CTRL_DOWN_MASK), bold.getActionCommand());
+		bold.getActionMap().put(bold.getActionCommand(), bold.getAction());
 		bold.setToolTipText("Bold (ALT + B)");
-		italic.addActionListener(this);
-		italic.setMnemonic(KeyEvent.VK_I);
+		this.italic = new JToggleButton(new ItalicAction(this, this.italicIcon));
+		italic.setActionCommand("italic_bind");
+		italic.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke('I', KeyEvent.CTRL_DOWN_MASK), italic.getActionCommand());
+		italic.getActionMap().put(italic.getActionCommand(), italic.getAction());
 		italic.setToolTipText("Italic (ALT + I)");
-		underline.addActionListener(this);
-		underline.setMnemonic(KeyEvent.VK_U);
+		this.underline = new JToggleButton(new UnderlineAction(this, this.underlineIcon));
+		underline.setActionCommand("underline_bind");
+		underline.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke('U', KeyEvent.CTRL_DOWN_MASK), underline.getActionCommand());
+		underline.getActionMap().put(underline.getActionCommand(), underline.getAction());
 		underline.setToolTipText("Underline (ALT + U)");
 		
 		formatting.setFloatable(false);
@@ -287,8 +298,8 @@ public class WordProcessing implements ActionListener, ItemListener {
     	
     	area1.setDragEnabled(true);
     	area1.setTransferHandler(new ClipboardHandler());
-    	area1.addCaretListener(new CaretStalker());
-    	doc.addDocumentListener(new DocStalker());
+    	area1.addCaretListener(new CaretStalker(this));
+    	doc.addDocumentListener(new DocStalker(this));
     	
     	frame1.addWindowFocusListener(new WindowAdapter() {
 			public void windowGainedFocus(WindowEvent e) {
@@ -528,7 +539,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 		return true;
 	}
 	
-	public static void updateStats() {
+	public void updateStats() {
 		int lastCharCount = charCount;
 		int lastCharNoSpaceCount = charCountNoSpaces;
 		int lastWordCount = wordCount;
@@ -558,24 +569,24 @@ public class WordProcessing implements ActionListener, ItemListener {
 	}
 	
 	public void actionPerformed(ActionEvent e) {
-		if (e.getSource().equals(newFile)) {
-			if (!revisionSaved) {
+		if (e.getSource().equals(this.newFile)) {
+			if (!this.revisionSaved) {
 				int a = JOptionPane.showConfirmDialog(frame1, "This document has unsaved changes. Would you like to save before creating a new document?", title, JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 				if (a == JOptionPane.YES_OPTION) {
-					save.doClick();
+					this.save.doClick();
 				}
 				else if (a == JOptionPane.CANCEL_OPTION) {
 					return;
 				}
 			}
-			clearDocument(true);
+			this.clearDocument(true);
 		}
-		else if (e.getSource().equals(saveAsB)) {
-			saveAs();
+		else if (e.getSource().equals(this.saveAsB)) {
+			this.saveAs();
 		}
-		else if (e.getSource().equals(save)) {
-			if (!fileOpen) {
-				saveAsB.doClick();
+		else if (e.getSource().equals(this.save)) {
+			if (!this.fileOpen) {
+				this.saveAsB.doClick();
 				return;
 			}
 			else {
@@ -790,7 +801,7 @@ public class WordProcessing implements ActionListener, ItemListener {
 			findPnl = new JPanel();
 			findFld = new JTextField(20);
 			matchCase = new JCheckBox("Match case");
-			findBtn = new JButton("Find Next");
+			findNext = new JButton(new FindNextAction(this));
 			
 			findPnl.setLayout(new GridLayout(0, 3));
 			findPnl.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -799,9 +810,12 @@ public class WordProcessing implements ActionListener, ItemListener {
 			matchCase.setActionCommand("matchCase");
 			matchCase.setMnemonic(KeyEvent.VK_M);
 			findPnl.add(matchCase);
-			findBtn.addActionListener(this);
-			findBtn.setMnemonic(KeyEvent.VK_F);
-			findPnl.add(findBtn);
+			findNext.setText("Find Next");
+			findNext.setMnemonic(KeyEvent.VK_F);
+			findNext.setActionCommand("findNext_bind");
+			findNext.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ENTER"), findNext.getActionCommand());
+			findNext.getActionMap().put(findNext.getActionCommand(), findNext.getAction());
+			findPnl.add(findNext);
 			findPnl.add(findMsg);
 			findDlg.add(findPnl);
 			findDlg.pack();
@@ -809,157 +823,10 @@ public class WordProcessing implements ActionListener, ItemListener {
 			findDlg.setLocationRelativeTo(frame1);
 			findDlg.setVisible(true);
 		}
-		else if (e.getSource().equals(findBtn)) {
-			String txt = area1.getText();
-			String find = findFld.getText();
-			
-			if (!findAndMatchCase) {
-				txt = txt.toLowerCase();
-				find = find.toLowerCase();
-			}
-			
-			if (txt.contains(find)) {
-				area1.select(txt.indexOf(find), txt.indexOf(find) + find.length());
-				
-				for (int i = 0; i < txt.length(); i++) {
-					
-				}
-			}
-			else {
-				findMsg.setText("No matches found");
-				Toolkit.getDefaultToolkit().beep();
-			}
-		}
 		else if (e.getSource().equals(select)) {
 			area1.requestFocus();
 			area1.selectAll();
 		}
-		else if (e.getSource().equals(bold)) {
-			boolean selection = false;
-			
-			area1.requestFocus();
-			String text = area1.getSelectedText();
-			int start = 0, length = 0;
-			if (text != null) {
-				selection = true;
-				start = area1.getSelectionStart();
-				length = text.length();
-			}
-			
-			if (bold.isSelected()) {
-				try {
-					if (selection) {
-						doc.remove(start, length);
-						doc.insertString(start, text, doc.getStyle("bold"));
-					}
-				}
-				catch (BadLocationException ble) {
-					ble.printStackTrace();
-				}
-			}
-			else {
-				try {
-					if (selection) {
-						doc.remove(start, length);
-						doc.insertString(start, text, doc.getStyle("regular"));
-					}
-				}
-				catch (BadLocationException ble) {
-					ble.printStackTrace();
-				}
-			}
-		}
-		else if (e.getSource().equals(italic)) {
-			boolean selection = false;
-			
-			area1.requestFocus();
-			String text = area1.getSelectedText();
-			int start = 0, length = 0;
-			if (text != null) {
-				selection = true;
-				start = area1.getSelectionStart();
-				length = text.length();
-			}
-			
-			if (italic.isSelected()) {
-				try {
-					if (selection) {
-						doc.remove(start, length);
-						doc.insertString(start, text, doc.getStyle("italic"));
-					}
-				}
-				catch (BadLocationException ble) {
-					ble.printStackTrace();
-				}
-			}
-			else {
-				try {
-					if (selection) {
-						doc.remove(start, length);
-						doc.insertString(start, text, doc.getStyle("regular"));
-					}
-				}
-				catch (BadLocationException ble) {
-					ble.printStackTrace();
-				}
-			}
-		}
-		else if (e.getSource().equals(underline)) {
-			boolean selection = false;
-			
-			area1.requestFocus();
-			String text = area1.getSelectedText();
-			int start = 0, length = 0;
-			if (text != null) {
-				selection = true;
-				start = area1.getSelectionStart();
-				length = text.length();
-			}
-			
-			if (underline.isSelected()) {
-				try {
-					if (selection) {
-						doc.remove(start, length);
-						doc.insertString(start, text, doc.getStyle("underline"));
-					}
-				}
-				catch (BadLocationException ble) {
-					ble.printStackTrace();
-				}
-			}
-			else {
-				try {
-					if (selection) {
-						doc.remove(start, length);
-						doc.insertString(start, text, doc.getStyle("regular"));
-					}
-				}
-				catch (BadLocationException ble) {
-					ble.printStackTrace();
-				}
-			}
-		}
-//		else if (e.getSource() instanceof AbstractButton) {
-//			AbstractButton absBtn = (AbstractButton)e.getSource();
-//			String actionCmd = absBtn.getActionCommand();
-//			if (actionCmd.isEmpty() || actionCmd == null) {
-//				return;
-//			}
-//			else if (actionCmd.equals("findBtn")) {
-//				String txt = area1.getText();
-//				String find = findFld.getText();
-//				if (!findAndMatchCase) {
-//					txt = txt.toLowerCase();
-//					find = find.toLowerCase();
-//					if (txt.contains(find)) {
-//						
-//					}
-//					else {
-//						Toolkit.getDefaultToolkit().beep();
-//					}
-//				}
-//			}
-//		}
 	}
 	
 	public void itemStateChanged(ItemEvent e) {
@@ -974,135 +841,6 @@ public class WordProcessing implements ActionListener, ItemListener {
 					findAndMatchCase = false;
 				}
 			}
-		}
-	}
-	
-	static class DocStalker implements DocumentListener {
-		public void insertUpdate(DocumentEvent e) {
-			WordProcessing.revisionSaved = false;
-			WordProcessing.updateStats();
-		}
-
-		public void removeUpdate(DocumentEvent e) {
-			WordProcessing.revisionSaved = false;
-			WordProcessing.updateStats();
-		}
-
-		public void changedUpdate(DocumentEvent e) {
-			WordProcessing.revisionSaved = false;
-		}
-		
-	}
-	
-	static class DocFilter extends DocumentFilter {
-		public void remove(FilterBypass fb, int offset, int length) throws BadLocationException {
-			fb.remove(offset, length);
-		}
-		
-		public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
-			fb.insertString(offset, string, attr);
-		}
-	}
-	
-	static class ClipboardHandler extends TransferHandler {
-		private static final long serialVersionUID = -4645012626515202311L;
-		
-		//Starting/ending point of selection in doc
-		Position p0 = null, p1 = null;
-		
-		/*
-		 * Import data from clipboard (Paste)
-		 */
-		public boolean importData(TransferHandler.TransferSupport support) {
-			//Is this text? Can it be pasted?
-			if (!canImport(support)) {
-				return false;
-			}
-			
-			String data;
-			try {
-				//Convert clipboard text into a Java String
-				data = (String)support.getTransferable().getTransferData(DataFlavor.stringFlavor);
-			}
-			catch (UnsupportedFlavorException ufe) {
-				//Guess this can't be converted to String
-				ufe.printStackTrace();
-				return false;
-			}
-			catch (IOException ioe) {
-				ioe.printStackTrace();
-				return false;
-			}
-			
-			//Get the doc
-			JTextPane pane = (JTextPane)support.getComponent();
-			//Whatever is selected, replace
-			pane.replaceSelection(data);
-			return true;
-		}
-		
-		//Copying
-		protected Transferable createTransferable(JComponent c) {
-			//Get the pane
-	        JTextPane source = (JTextPane)c;
-	        //Selection index start
-	        int start = source.getSelectionStart();
-	        //Selection index end
-	        int end = source.getSelectionEnd();
-	        //Get the doc
-	        Document doc = source.getDocument();
-	        //Return nothing if there is no selection
-	        if (start == end) {
-	            return null;
-	        }
-	        
-	        try {
-	        	//Set the positions
-	            p0 = doc.createPosition(start);
-	            p1 = doc.createPosition(end);
-	        }
-	        catch (BadLocationException ble) {
-	        	//Invalid locations
-	            ble.printStackTrace();
-	        }
-	        //Copy selected text
-	        String data = source.getSelectedText();
-	        //Return it
-	        return new StringSelection(data);
-	    }
-
-	    //What can the pane do?
-	    public int getSourceActions(JComponent c) {
-	        return COPY_OR_MOVE;
-	    }
-		
-		//Cutting
-		protected void exportDone(JComponent c, Transferable data, int action) {
-			//Only do this if cutting, not copying
-	        if (action != MOVE) {
-	            return;
-	        }
-	        
-	        //Make sure there is a valid selection
-	        if ((p0 != null) && (p1 != null) && (p0.getOffset() != p1.getOffset())) {
-	            try {
-	            	//Do the cutting
-	                JTextComponent tc = (JTextComponent)c;
-	                tc.getDocument().remove(p0.getOffset(), p1.getOffset() - p0.getOffset());
-	            }
-	            catch (BadLocationException ble) {
-	                ble.printStackTrace();
-	            }
-	        }
-	    }
-		
-		//Can this be transfered?
-		public boolean canImport(TransferHandler.TransferSupport support) {
-			//MUST be String text
-	        if (!support.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-	            return false;
-	        }
-	        return true;
 		}
 	}
 }
