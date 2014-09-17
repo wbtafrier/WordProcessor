@@ -191,9 +191,10 @@ public class WordProcessor implements ActionListener, ItemListener {
     	makeDirectory();
 		
     	try {
-			this.boldIcon = new ImageIcon(ImageIO.read(WordProcessor.class.getResourceAsStream("/bold.png")));
-			this.italicIcon = new ImageIcon(ImageIO.read(WordProcessor.class.getResourceAsStream("/italic.png")));
-			this.underlineIcon = new ImageIcon(ImageIO.read(WordProcessor.class.getResourceAsStream("/underline.png")));
+    		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+			this.boldIcon = new ImageIcon(ImageIO.read(cl.getResourceAsStream("bold.png")));
+			this.italicIcon = new ImageIcon(ImageIO.read(cl.getResourceAsStream("italic.png")));
+			this.underlineIcon = new ImageIcon(ImageIO.read(cl.getResourceAsStream("underline.png")));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -546,14 +547,25 @@ public class WordProcessor implements ActionListener, ItemListener {
 		charCount = 0;
 		charCountNoSpaces = 0;
 		wordCount = 0;
+		
 		for (int i = doc.getStartPosition().getOffset(); i < doc.getLength(); i++) {
 			try {
-				if (!doc.getText(i, 1).equals("\n") && !doc.getText(i, 1).equals("\t")) {
+				String character = doc.getText(i, 1);
+				if (!character.equals("\n") && !character.equals("\t")) {
 					charCount++;
-					if (!doc.getText(i, 1).equals(" ")) {
+					if (!character.equals(" ")) {
 						charCountNoSpaces++;
 					}
-				}	
+				}
+				
+				if (i >= 1) {
+					String lastCharacter = doc.getText(i - 1, 1);
+					if (lastCharacter != null 
+						&& !character.equals(" ") && !character.equals("\n") && !character.equals("\t")
+						&& (lastCharacter.equals(" ") || lastCharacter.equals("\n") || lastCharacter.equals("\t"))) {
+						wordCount++;
+					}
+				}
 			}
 			catch (BadLocationException e) {
 				charCount = lastCharCount;
