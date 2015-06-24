@@ -1,8 +1,5 @@
 package com.wordprocessor.core;
 /*
- Alex Frier
- 5/22/2013
- 
  FINAL PROJECT
  This program allows users to write their own documents and save them to their hard drive. When re-running the program,
  users will be able to open these documents and continue editing them, including formatting depending on the file format.
@@ -52,6 +49,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.Scanner;
 
@@ -191,10 +189,12 @@ public class WordProcessor implements ActionListener, ItemListener {
     	makeDirectory();
 		
     	try {
-    		ClassLoader cl = Thread.currentThread().getContextClassLoader();
-			this.boldIcon = new ImageIcon(ImageIO.read(cl.getResourceAsStream("bold.png")));
-			this.italicIcon = new ImageIcon(ImageIO.read(cl.getResourceAsStream("italic.png")));
-			this.underlineIcon = new ImageIcon(ImageIO.read(cl.getResourceAsStream("underline.png")));
+    		InputStream boldStream = WordProcessor.class.getClass().getResourceAsStream("/resources/bold.png");
+			this.boldIcon = new ImageIcon(ImageIO.read(boldStream));
+			InputStream italicStream = WordProcessor.class.getClass().getResourceAsStream("/resources/italic.png");
+			this.italicIcon = new ImageIcon(ImageIO.read(italicStream));
+			InputStream underlineStream = WordProcessor.class.getClass().getResourceAsStream("/resources/underline.png");
+			this.underlineIcon = new ImageIcon(ImageIO.read(underlineStream));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
